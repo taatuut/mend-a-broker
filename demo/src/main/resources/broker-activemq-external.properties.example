@@ -1,0 +1,19 @@
+# A real (non-embedded) ActiveMQ broker.
+# - ActiveMQ "Classic" (5.x): enable an AMQP transport connector, e.g.
+#     <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=1000"/>
+#   in conf/activemq.xml.
+# - ActiveMQ Artemis: enable an AMQP acceptor, e.g.
+#     <acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP</acceptor>
+#   in etc/broker.xml (this is exactly what the demo's embedded mode does programmatically).
+broker.type=ACTIVEMQ
+broker.host=REPLACE-ME-broker-hostname-or-ip
+broker.port=5672
+broker.tls=false
+broker.username=REPLACE-ME-username
+broker.password=REPLACE-ME-password
+broker.connectTimeoutMs=10000
+
+# For a TLS-secured AMQP acceptor instead, use:
+# broker.port=5671
+# broker.tls=true
+# broker.verifyHostname=true

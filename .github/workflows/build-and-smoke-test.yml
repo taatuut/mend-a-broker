@@ -1,0 +1,94 @@
+name: Build and smoke test
+
+# Builds both Maven modules and runs the standalone demo against a Solace
+# PubSub+ broker started as a GitHub Actions service container, as a smoke
+# test that the connector still sends/receives correctly. This does NOT
+# test against real Solace Cloud / self-managed / ActiveMQ credentials -
+# see the "Real broker" job below, which only runs if the matching repo
+# secrets are configured, so this workflow still passes cleanly in a fork
+# or a repo that hasn't set any broker up yet.
+#
+# Note: this used to run the demo in its zero-setup embedded-ActiveMQ mode
+# instead of using a service container. That mode is temporarily disabled -
+# see README.md, "Why the embedded ActiveMQ demo mode is disabled".
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-demo:
+    runs-on: ubuntu-latest
+
+    services:
+      solace:
+        image: solace/solace-pubsub-standard
+        env:
+          username_admin_globalaccesslevel: admin
+          username_admin_password: admin
+        ports:
+          - 8080:8080
+          - 5672:5672
+          - 5550:5550
+        options: >-
+          --shm-size=1g
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build connector + demo
+        run: mvn -B -DskipTests package
+
+      - name: Wait for Solace broker to report healthy
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5550/health-check/direct-active > /dev/null && exit 0
+            echo "waiting for broker..."; sleep 3
+          done
+          echo "broker did not become healthy in time"; exit 1
+
+      - name: Run demo against local Solace broker (smoke test)
+        run: java -jar demo/target/amqp-broker-demo.jar
+
+      - name: Upload built jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            connector/target/*-with-dependencies.jar
+            demo/target/amqp-broker-demo.jar
+
+  # Optional: exercise a real broker in CI. Only runs when the corresponding
+  # secret is present, so this job is skipped (not failed) until you add one.
+  # Add repo secrets under Settings -> Secrets and variables -> Actions:
+  #   SOLACE_CLOUD_HOST, SOLACE_CLOUD_USERNAME, SOLACE_CLOUD_PASSWORD
+  real-broker-solace-cloud:
+    needs: build-and-demo
+    runs-on: ubuntu-latest
+    if: ${{ vars.RUN_REAL_BROKER_TESTS == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn -B -DskipTests package
+      - name: Write connection properties from secrets
+        run: |
+          cat > solace-cloud.properties <<EOF
+          broker.type=SOLACE_CLOUD
+          broker.host=${{ secrets.SOLACE_CLOUD_HOST }}
+          broker.port=5671
+          broker.tls=true
+          broker.username=${{ secrets.SOLACE_CLOUD_USERNAME }}
+          broker.password=${{ secrets.SOLACE_CLOUD_PASSWORD }}
+          EOF
+      - run: java -jar demo/target/amqp-broker-demo.jar solace-cloud.properties

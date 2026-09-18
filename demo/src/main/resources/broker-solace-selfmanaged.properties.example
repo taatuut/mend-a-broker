@@ -1,0 +1,20 @@
+# Solace PubSub+ software/appliance broker you manage yourself.
+# Confirm the AMQP service is enabled on the target Message VPN:
+# PubSub+ Manager -> your VPN -> Services -> AMQP -> toggle ON, note the port.
+broker.type=SOLACE_SELF_MANAGED
+broker.host=REPLACE-ME-broker-hostname-or-ip
+broker.port=5672
+broker.tls=false
+broker.username=REPLACE-ME-client-username
+broker.password=REPLACE-ME-client-password
+broker.messageVpn=REPLACE-ME-vpn-name
+# Self-managed brokers can host several Message VPNs behind one shared AMQP
+# port, so the VPN must be folded into the SASL username as "user@vpn".
+# If your AMQP service is dedicated to a single VPN you can set this false.
+broker.appendVpnToUsername=true
+broker.connectTimeoutMs=10000
+
+# For a TLS-secured AMQP service instead, use:
+# broker.port=5671
+# broker.tls=true
+# broker.verifyHostname=true   (set to false only for self-signed lab certs)

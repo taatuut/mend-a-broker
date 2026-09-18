@@ -1,0 +1,15 @@
+# Solace Cloud (managed Event Broker Service).
+# Find these values in Solace Cloud Console -> your service -> Connect -> Solace Messaging -> "AMQP" tab.
+broker.type=SOLACE_CLOUD
+broker.host=REPLACE-ME.messaging.solace.cloud
+# Solace Cloud always exposes AMQP with TLS on 5671. The plaintext AMQP port
+# (5672) is normally disabled for Solace Cloud services.
+broker.port=5671
+broker.tls=true
+broker.verifyHostname=true
+broker.username=REPLACE-ME-client-username
+broker.password=REPLACE-ME-client-password
+# Each Solace Cloud service is already scoped to one Message VPN, so it is
+# NOT required in the AMQP username - leave appendVpnToUsername off.
+broker.appendVpnToUsername=false
+broker.connectTimeoutMs=10000
